@@ -857,7 +857,7 @@ function renderRectification() {
                                             <i class="fas fa-times mr-1"></i> 复查不通过
                                         </button>
                                     ` : ''}
-                                    ${r.level === 'critical' && r.status !== 'closed' ? `
+                                    ${r.level === 'critical' && r.status !== 'resolved' ? `
                                         <button onclick="showModal('suggestClosure', ${r.id})" class="px-4 py-2 border border-red-300 text-red-600 rounded-lg text-sm hover:bg-red-50 transition">
                                             <i class="fas fa-exclamation-triangle mr-1"></i> 停业建议
                                         </button>
@@ -963,6 +963,31 @@ function renderFloorplan() {
                                 <circle cx="130" cy="260" r="5" fill="#22c55e"/>
                                 <circle cx="340" cy="260" r="5" fill="#f59e0b"/>
                                 <circle cx="550" cy="260" r="5" fill="#22c55e"/>
+                                
+                                ${records.map((rec, idx) => {
+                                    const positions = [
+                                        { x: 420, y: 260 },
+                                        { x: 180, y: 260 },
+                                        { x: 260, y: 260 },
+                                        { x: 480, y: 260 },
+                                        { x: 580, y: 260 },
+                                        { x: 100, y: 260 },
+                                        { x: 320, y: 260 },
+                                        { x: 620, y: 260 }
+                                    ];
+                                    const pos = positions[idx % positions.length];
+                                    return `
+                                        <g class="floor-plan-area" onclick="showModal('passageRecordDetail', ${rec.id})">
+                                            <circle cx="${pos.x}" cy="${pos.y}" r="12" fill="#ef4444" opacity="0.3">
+                                                <animate attributeName="r" values="10;16;10" dur="2s" repeatCount="indefinite"/>
+                                                <animate attributeName="opacity" values="0.3;0.6;0.3" dur="2s" repeatCount="indefinite"/>
+                                            </circle>
+                                            <circle cx="${pos.x}" cy="${pos.y}" r="7" fill="#ef4444" stroke="#fff" stroke-width="2"/>
+                                            <text x="${pos.x}" y="${pos.y + 3}" text-anchor="middle" class="text-xs fill-white font-bold">${idx + 1}</text>
+                                            <title>${rec.location} - ${rec.description}</title>
+                                        </g>
+                                    `;
+                                }).join('')}
                             </svg>
                         </div>
                     </div>

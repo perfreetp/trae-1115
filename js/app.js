@@ -273,7 +273,8 @@ function showModal(type, id = null) {
         suggestClosure: { title: '停业建议', content: getClosureForm(id) },
         addMaterial: { title: '新增应急物资', content: getMaterialForm() },
         addDrill: { title: '记录演练', content: getDrillForm() },
-        recordPassage: { title: '记录通道占用', content: getPassageRecordForm() }
+        recordPassage: { title: '记录通道占用', content: getPassageRecordForm() },
+        passageRecordDetail: { title: '通道占用记录详情', content: getPassageRecordDetail(id) }
     };
     
     const config = modalConfigs[type] || { title: '详情', content: '<p>内容加载中...</p>' };
@@ -866,16 +867,20 @@ function assignHazard(id) {
     const deadline = formData.get('deadline');
     const remark = formData.get('remark') || '隐患已派单处理';
     
-    const hazard = db.hazards.find(h => h.id === id);
-    if (!hazard) return;
+    const hazardId = Number(id);
+    const hazard = db.hazards.find(h => h.id === hazardId);
+    if (!hazard) {
+        alert('找不到对应的隐患记录');
+        return;
+    }
     
-    updateHazard(id, {
+    updateHazard(hazardId, {
         handler: handler,
         deadline: deadline,
         status: 'processing'
     });
     
-    let rect = db.rectification.find(r => r.hazardId === id);
+    let rect = db.rectification.find(r => r.hazardId === hazardId);
     if (rect) {
         updateRectification(rect.id, {
             handler: handler,
@@ -886,7 +891,7 @@ function assignHazard(id) {
     } else {
         const newRect = {
             id: generateId(db.rectification),
-            hazardId: id,
+            hazardId: hazardId,
             hazard: hazard.title,
             space: hazard.space,
             level: hazard.level,
@@ -1199,14 +1204,20 @@ function submitRejectReview(id) {
         return;
     }
     
-    const rect = db.rectification.find(x => x.id === id);
-    const currentProgress = rect?.progress || 100;
+    const rectId = Number(id);
+    const rect = db.rectification.find(x => x.id === rectId);
+    if (!rect) {
+        alert('找不到对应的整改记录');
+        return;
+    }
+    
+    const currentProgress = rect.progress || 100;
     const fallbackProgress = Math.max(50, Math.floor(currentProgress * 0.8));
     
-    updateRectification(id, { status: 'processing', progress: fallbackProgress });
-    addRectificationLog(id, '复查不通过', `复查不通过，原因：${reason}，进度回退至 ${fallbackProgress}%`, '复查人员');
+    updateRectification(rectId, { status: 'processing', progress: fallbackProgress });
+    addRectificationLog(rectId, '复查不通过', `复查不通过，原因：${reason}，进度回退至 ${fallbackProgress}%`, '复查人员');
     
-    if (rect && rect.hazardId) {
+    if (rect.hazardId) {
         updateHazard(rect.hazardId, { status: 'processing' });
     }
     
@@ -1382,6 +1393,55 @@ function zoomFloorPlan(delta) {
     db.floorPlanZoom = Math.max(minZoom, Math.min(maxZoom, (db.floorPlanZoom || 100) + delta));
     saveData();
     refreshCurrentPage();
+}
+
+function getPassageRecordDetail(id) {
+    const recId = Number(id);
+    const rec = db.passageRecords.find(x => x.id === recId);
+    if (!rec) return '<p>记录不存在</p>';
+    
+    return `
+        <div class="space-y-4">
+            <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p class="font-medium text-red-800">${rec.location}</p>
+                <p class="text-sm text-red-600 mt-1">${rec.description}</p>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <p class="text-gray-500 text-sm">所属空间</p>
+                    <p class="font-medium">${rec.space || '-'}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500 text-sm">占用类型</p>
+                    <p class="font-medium">${rec.type || '-'}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500 text-sm">占用宽度</p>
+                    <p class="font-medium">${rec.width ? rec.width + ' 米' : '-'}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500 text-sm">责任单位</p>
+                    <p class="font-medium">${rec.responsible || '-'}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500 text-sm">发现日期</p>
+                    <p class="font-medium">${rec.discoverDate || '-'}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500 text-sm">发现人</p>
+                    <p class="font-medium">${rec.discoverer || '-'}</p>
+                </div>
+            </div>
+            <div>
+                <p class="text-gray-500 text-sm">当前状态</p>
+                <p class="font-medium">
+                    <span class="badge ${rec.status === 'pending' ? 'badge-danger' : 'badge-warning'}">
+                        ${rec.status === 'pending' ? '待处理' : '处理中'}
+                    </span>
+                </p>
+            </div>
+        </div>
+    `;
 }
 
 function getPassageRecordForm() {
