@@ -257,7 +257,8 @@ function showModal(type, id = null) {
         spaceDetail: { title: '空间详情', content: getSpaceDetail(id) },
         addInspection: { title: '新建巡查任务', content: getInspectionForm() },
         inspectionDetail: { title: '巡查任务详情', content: getInspectionDetail(id) },
-        addHazard: { title: '登记隐患', content: getHazardForm() },
+        executeInspection: { title: '执行巡查任务', content: getInspectionExecuteForm(id) },
+        addHazard: { title: '登记隐患', content: getHazardForm(null, id) },
         hazardDetail: { title: '隐患详情', content: getHazardDetail(id) },
         assignHazard: { title: '隐患派单', content: getAssignForm(id) },
         uploadEvidence: { title: '上传照片/视频', content: getUploadForm(id) },
@@ -268,6 +269,7 @@ function showModal(type, id = null) {
         cameraDetail: { title: `${id} - 监控详情`, content: getCameraDetail(id) },
         rectificationDetail: { title: '整改进展详情', content: getRectificationDetail(id) },
         updateProgress: { title: '更新整改进度', content: getProgressForm(id) },
+        rejectReview: { title: '复查不通过说明', content: getRejectReviewForm(id) },
         suggestClosure: { title: '停业建议', content: getClosureForm(id) },
         addMaterial: { title: '新增应急物资', content: getMaterialForm() },
         addDrill: { title: '记录演练', content: getDrillForm() },
@@ -516,28 +518,179 @@ function getInspectionDetail(id) {
     `;
 }
 
-function getHazardForm() {
+function executeInspection(id) {
+    showModal('executeInspection', id);
+}
+
+function getInspectionExecuteForm(id) {
+    const ins = db.inspections.find(i => i.id === id);
+    if (!ins) return '<p>未找到任务信息</p>';
+    
+    const categoryLabels = {
+        '消防门': { icon: 'fa-door-open', color: 'text-orange-500' },
+        '排水泵': { icon: 'fa-water', color: 'text-blue-500' },
+        '照明': { icon: 'fa-lightbulb', color: 'text-yellow-500' },
+        '通道占用': { icon: 'fa-route', color: 'text-purple-500' },
+        '监控盲区': { icon: 'fa-video', color: 'text-green-500' }
+    };
+    
+    return `
+        <div class="space-y-4">
+            <div class="bg-blue-50 p-4 rounded-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h4 class="font-medium text-blue-800">${ins.title}</h4>
+                        <p class="text-sm text-blue-600">${ins.space} · ${ins.inspector}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-2xl font-bold text-blue-600">${ins.completed}/${ins.items}</p>
+                        <p class="text-xs text-blue-500">已完成检查项</p>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="progress-bar">
+                        <div class="progress-fill ${ins.completed === ins.items ? 'bg-green-500' : 'bg-blue-500'}" style="width: ${(ins.completed / ins.items * 100)}%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="max-h-80 overflow-y-auto space-y-3">
+                ${ins.checkItems.map(item => `
+                    <div class="border rounded-lg p-4 ${item.checked ? (item.result === '异常' ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200') : 'bg-white'}">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-start space-x-3">
+                                <input type="checkbox" 
+                                    ${item.checked ? 'checked' : ''} 
+                                    onchange="toggleCheckItem(${ins.id}, ${item.id}, this.checked)"
+                                    class="mt-1 w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
+                                <div>
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fas ${categoryLabels[item.category]?.icon || 'fa-check'} ${categoryLabels[item.category]?.color || 'text-gray-500'}"></i>
+                                        <span class="font-medium">${item.name}</span>
+                                        <span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">${item.category}</span>
+                                    </div>
+                                    ${item.checked && item.result === '异常' ? `
+                                        <p class="text-sm text-red-600 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>${item.remark || '发现异常'}</p>
+                                    ` : ''}
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                ${item.checked ? `
+                                    <span class="text-sm px-2 py-1 rounded ${item.result === '异常' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}">
+                                        ${item.result}
+                                    </span>
+                                    ${item.result === '异常' ? `
+                                        <button onclick="registerHazardFromCheck(${ins.id}, ${item.id})" class="text-sm text-blue-600 hover:text-blue-800 flex items-center">
+                                            <i class="fas fa-plus-circle mr-1"></i>登记隐患
+                                        </button>
+                                    ` : ''}
+                                ` : `
+                                    <div class="flex space-x-1">
+                                        <button onclick="markCheckResult(${ins.id}, ${item.id}, '正常')" class="text-xs px-2 py-1 bg-green-100 text-green-600 rounded hover:bg-green-200">
+                                            正常
+                                        </button>
+                                        <button onclick="markCheckResult(${ins.id}, ${item.id}, '异常')" class="text-xs px-2 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200">
+                                            异常
+                                        </button>
+                                    </div>
+                                `}
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+            
+            <div class="flex justify-between pt-4 border-t">
+                <button onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">暂存退出</button>
+                ${ins.completed === ins.items ? `
+                    <button onclick="completeInspection(${ins.id})" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">完成巡查</button>
+                ` : `
+                    <span class="text-sm text-gray-500 flex items-center"><i class="fas fa-info-circle mr-1"></i>请完成所有检查项</span>
+                `}
+            </div>
+        </div>
+    `;
+}
+
+function toggleCheckItem(inspectionId, itemId, checked) {
+    const result = checked ? '正常' : '';
+    updateInspectionCheckItem(inspectionId, itemId, { checked: checked, result: result });
+    showModal('executeInspection', inspectionId);
+}
+
+function markCheckResult(inspectionId, itemId, result) {
+    updateInspectionCheckItem(inspectionId, itemId, { checked: true, result: result, remark: result === '异常' ? '检查发现异常' : '' });
+    showModal('executeInspection', inspectionId);
+}
+
+function registerHazardFromCheck(inspectionId, itemId) {
+    currentEditingId = { inspectionId, itemId };
+    showModal('addHazard', { inspectionId, itemId });
+}
+
+function completeInspection(id) {
+    const ins = db.inspections.find(i => i.id === id);
+    if (ins) {
+        ins.status = 'completed';
+        ins.endDate = new Date().toISOString().split('T')[0];
+        saveData();
+    }
+    closeModal();
+    refreshCurrentPage();
+}
+
+function getHazardForm(id = null, fromInspection = null) {
+    let prefill = {};
+    if (fromInspection && typeof fromInspection === 'object') {
+        const ins = db.inspections.find(i => i.id === fromInspection.inspectionId);
+        const item = ins?.checkItems?.find(it => it.id === fromInspection.itemId);
+        if (ins && item) {
+            const typeMap = {
+                '消防门': '消防设施',
+                '排水泵': '排水设施',
+                '照明': '照明故障',
+                '通道占用': '通道占用',
+                '监控盲区': '监控设施'
+            };
+            prefill = {
+                title: item.name + ' - 异常',
+                space: ins.space,
+                type: typeMap[item.category] || '其他',
+                discoverer: ins.inspector,
+                location: item.name,
+                description: item.remark || '巡查中发现异常',
+                fromInspectionId: fromInspection.inspectionId
+            };
+        }
+    }
+    
     return `
         <form id="addHazardForm" class="space-y-4">
+            ${prefill.fromInspectionId ? `
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    来自巡查任务登记，已自动填充相关信息
+                </div>
+            ` : ''}
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">隐患标题</label>
-                <input type="text" name="title" placeholder="请简要描述隐患" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="text" name="title" value="${prefill.title || ''}" placeholder="请简要描述隐患" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">所属空间</label>
                     <select name="space" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        ${db.spaces.map(s => `<option value="${s.name}">${s.name}</option>`).join('')}
+                        ${db.spaces.map(s => `<option value="${s.name}" ${prefill.space === s.name ? 'selected' : ''}>${s.name}</option>`).join('')}
                     </select>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">隐患类型</label>
                     <select name="type" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="通道占用">通道占用</option>
-                        <option value="消防设施">消防设施</option>
-                        <option value="照明故障">照明故障</option>
-                        <option value="监控设施">监控设施</option>
-                        <option value="排水设施">排水设施</option>
+                        <option value="通道占用" ${prefill.type === '通道占用' ? 'selected' : ''}>通道占用</option>
+                        <option value="消防设施" ${prefill.type === '消防设施' ? 'selected' : ''}>消防设施</option>
+                        <option value="照明故障" ${prefill.type === '照明故障' ? 'selected' : ''}>照明故障</option>
+                        <option value="监控设施" ${prefill.type === '监控设施' ? 'selected' : ''}>监控设施</option>
+                        <option value="排水设施" ${prefill.type === '排水设施' ? 'selected' : ''}>排水设施</option>
                     </select>
                 </div>
                 <div>
@@ -545,22 +698,22 @@ function getHazardForm() {
                     <select name="level" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="low">低</option>
                         <option value="medium">中</option>
-                        <option value="high">高</option>
+                        <option value="high" selected>高</option>
                         <option value="critical">极高</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">发现人</label>
-                    <input type="text" name="discoverer" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" name="discoverer" value="${prefill.discoverer || ''}" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">具体位置</label>
-                <input type="text" name="location" placeholder="如：A区3号出口附近" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="text" name="location" value="${prefill.location || ''}" placeholder="如：A区3号出口附近" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">详细描述</label>
-                <textarea name="description" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                <textarea name="description" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">${prefill.description || ''}</textarea>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">上传照片/视频</label>
@@ -574,7 +727,7 @@ function getHazardForm() {
             </div>
             <div class="flex justify-end space-x-3 pt-4 border-t">
                 <button type="button" onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">取消</button>
-                <button type="button" onclick="saveHazard()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">提交登记</button>
+                <button type="button" onclick="saveHazard(${prefill.fromInspectionId || 'null'})" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">提交登记</button>
             </div>
         </form>
     `;
@@ -595,7 +748,7 @@ function handleHazardFiles(files) {
     }
 }
 
-function saveHazard() {
+function saveHazard(fromInspectionId = null) {
     const form = document.getElementById('addHazardForm');
     const formData = new FormData(form);
     
@@ -611,10 +764,11 @@ function saveHazard() {
         status: 'pending',
         handler: '待指派',
         deadline: '',
-        attachments: pendingHazardFiles.map(f => ({ name: f.name, type: f.type, size: f.size }))
+        attachments: pendingHazardFiles.map(f => ({ name: f.name, type: f.type, size: f.size })),
+        fromInspectionId: fromInspectionId
     };
     
-    addHazard(hazard);
+    const newHazard = addHazard(hazard);
     pendingHazardFiles = [];
     closeModal();
     refreshCurrentPage();
@@ -847,11 +1001,12 @@ function getBlockedPassageDetail() {
 }
 
 function getExitDetail(name) {
-    const isBlocked = name.includes('堵塞');
+    const nameStr = String(name || '');
+    const isBlocked = nameStr.includes('堵塞');
     return `
         <div class="space-y-4">
             <div class="p-4 ${isBlocked ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'} rounded-lg">
-                <p class="font-medium ${isBlocked ? 'text-red-800' : 'text-green-800'}">${name}</p>
+                <p class="font-medium ${isBlocked ? 'text-red-800' : 'text-green-800'}">${nameStr}</p>
                 <p class="text-sm ${isBlocked ? 'text-red-600' : 'text-green-600'} mt-1">
                     ${isBlocked ? '出口被杂物堵塞，无法正常通行' : '出口畅通，可正常使用'}
                 </p>
@@ -865,12 +1020,13 @@ function getExitDetail(name) {
 }
 
 function getCameraDetail(name) {
-    const isOffline = name.includes('离线');
+    const nameStr = String(name || '');
+    const isOffline = nameStr.includes('离线');
     return `
         <div class="space-y-4">
             <div class="flex items-center space-x-3">
                 <div class="w-3 h-3 rounded-full ${isOffline ? 'bg-red-500' : 'bg-green-500'}"></div>
-                <span class="font-medium">${name}</span>
+                <span class="font-medium">${nameStr}</span>
             </div>
             <div class="grid grid-cols-2 gap-4">
                 <div><p class="text-gray-500 text-sm">状态</p><p class="font-medium ${isOffline ? 'text-red-600' : 'text-green-600'}">${isOffline ? '离线' : '在线'}</p></div>
@@ -983,12 +1139,42 @@ function approveReview(id) {
         updateHazard(r.hazardId, { status: 'resolved' });
     }
     
+    closeModal();
     refreshCurrentPage();
 }
 
-function rejectReview(id, reason) {
+function getRejectReviewForm(id) {
+    return `
+        <form id="rejectReviewForm" class="space-y-4">
+            <div class="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                <p class="font-medium text-orange-800"><i class="fas fa-exclamation-circle mr-2"></i>复查不通过</p>
+                <p class="text-sm text-orange-600 mt-1">请填写不通过原因，整改将退回处理中状态</p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">不通过原因 <span class="text-red-500">*</span></label>
+                <textarea name="reason" rows="4" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="请详细说明复查不通过的原因和需要继续整改的内容..." required></textarea>
+            </div>
+            <div class="flex justify-end space-x-3 pt-4 border-t">
+                <button type="button" onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">取消</button>
+                <button type="button" onclick="submitRejectReview('${id}')" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">确认不通过</button>
+            </div>
+        </form>
+    `;
+}
+
+function submitRejectReview(id) {
+    const form = document.getElementById('rejectReviewForm');
+    const formData = new FormData(form);
+    const reason = formData.get('reason');
+    
+    if (!reason || reason.trim() === '') {
+        alert('请填写不通过原因');
+        return;
+    }
+    
     updateRectification(id, { status: 'processing', progress: 50 });
-    addRectificationLog(id, '复查不通过', `复查不通过，原因：${reason || '需继续整改'}`, '复查人员');
+    addRectificationLog(id, '复查不通过', `复查不通过，原因：${reason}`, '复查人员');
+    closeModal();
     refreshCurrentPage();
 }
 
@@ -1166,6 +1352,12 @@ function getPassageRecordForm() {
     return `
         <form id="passageRecordForm" class="space-y-4">
             <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">所属空间</label>
+                <select name="space" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    ${db.spaces.map(s => `<option value="${s.name}">${s.name}</option>`).join('')}
+                </select>
+            </div>
+            <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">通道位置</label>
                 <input type="text" name="location" placeholder="如：A区主通道中段" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
@@ -1189,8 +1381,8 @@ function getPassageRecordForm() {
                 <input type="text" name="responsible" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">备注说明</label>
-                <textarea name="remark" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                <label class="block text-sm font-medium text-gray-700 mb-1">详细描述</label>
+                <textarea name="description" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="请描述占用情况..."></textarea>
             </div>
             <div class="flex justify-end space-x-3 pt-4 border-t">
                 <button type="button" onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">取消</button>
@@ -1203,15 +1395,17 @@ function getPassageRecordForm() {
 function savePassageRecord() {
     const form = document.getElementById('passageRecordForm');
     const formData = new FormData(form);
+    const type = formData.get('type');
+    const width = parseFloat(formData.get('width')) || 0;
+    const description = formData.get('description') || `${type}，约${width}米宽`;
+    
     const record = {
         location: formData.get('location'),
-        type: formData.get('type'),
-        width: parseFloat(formData.get('width')) || 0,
-        responsible: formData.get('responsible'),
-        remark: formData.get('remark'),
-        discoverTime: new Date().toLocaleString('zh-CN'),
+        space: formData.get('space'),
+        description: description,
+        discoverDate: new Date().toISOString().split('T')[0],
         discoverer: '当前用户',
-        status: 'active'
+        status: 'pending'
     };
     
     addPassageRecord(record);

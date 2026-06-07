@@ -303,7 +303,7 @@ function renderInspections() {
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm">
                                         <button onclick="showModal('inspectionDetail', ${ins.id})" class="text-blue-600 hover:text-blue-800 mr-3">详情</button>
-                                        ${ins.status !== 'completed' ? '<button class="text-green-600 hover:text-green-800">执行</button>' : ''}
+                                        ${ins.status !== 'completed' ? `<button onclick="executeInspection(${ins.id})" class="text-green-600 hover:text-green-800">执行</button>` : ''}
                                     </td>
                                 </tr>
                             `).join('')}
@@ -842,12 +842,17 @@ function renderRectification() {
                                         <button onclick="showModal('updateProgress', ${r.id})" class="px-4 py-2 border border-blue-300 text-blue-600 rounded-lg text-sm hover:bg-blue-50 transition">
                                             更新进度
                                         </button>
+                                        ${r.progress === 100 ? `
+                                            <button onclick="submitReview(${r.id})" class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition">
+                                                <i class="fas fa-paper-plane mr-1"></i> 提交复查
+                                            </button>
+                                        ` : ''}
                                     ` : ''}
                                     ${r.status === 'reviewing' ? `
                                         <button onclick="approveReview(${r.id})" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition">
                                             <i class="fas fa-check mr-1"></i> 复查通过
                                         </button>
-                                        <button onclick="rejectReview(${r.id})" class="px-4 py-2 border border-red-300 text-red-600 rounded-lg text-sm hover:bg-red-50 transition">
+                                        <button onclick="showModal('rejectReview', ${r.id})" class="px-4 py-2 border border-red-300 text-red-600 rounded-lg text-sm hover:bg-red-50 transition">
                                             <i class="fas fa-times mr-1"></i> 复查不通过
                                         </button>
                                     ` : ''}
@@ -987,7 +992,7 @@ function renderFloorplan() {
                     <div class="bg-white rounded-xl p-5 shadow-sm">
                         <div class="flex items-center justify-between mb-3">
                             <h4 class="font-semibold text-gray-800">通道占用记录</h4>
-                            <button onclick="showModal('addPassageRecord')" class="text-blue-600 text-xs hover:underline">
+                            <button onclick="showModal('recordPassage')" class="text-blue-600 text-xs hover:underline">
                                 <i class="fas fa-plus mr-1"></i>新增
                             </button>
                         </div>
@@ -1186,6 +1191,7 @@ function renderDrills() {
 }
 
 function renderRisk() {
+    const riskRanking = getRiskRanking();
     return `
         <div class="space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -1193,7 +1199,7 @@ function renderRisk() {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-gray-500 text-sm">极高风险</p>
-                            <p class="text-3xl font-bold text-red-600 mt-1">${db.riskRanking.filter(r => r.level === 'critical').length}</p>
+                            <p class="text-3xl font-bold text-red-600 mt-1">${riskRanking.filter(r => r.level === 'critical').length}</p>
                         </div>
                         <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
                             <i class="fas fa-skull-crossbones text-red-600 text-xl"></i>
@@ -1204,7 +1210,7 @@ function renderRisk() {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-gray-500 text-sm">高风险</p>
-                            <p class="text-3xl font-bold text-orange-600 mt-1">${db.riskRanking.filter(r => r.level === 'high').length}</p>
+                            <p class="text-3xl font-bold text-orange-600 mt-1">${riskRanking.filter(r => r.level === 'high').length}</p>
                         </div>
                         <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
                             <i class="fas fa-exclamation-triangle text-orange-600 text-xl"></i>
@@ -1215,7 +1221,7 @@ function renderRisk() {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-gray-500 text-sm">中风险</p>
-                            <p class="text-3xl font-bold text-yellow-600 mt-1">${db.riskRanking.filter(r => r.level === 'medium').length}</p>
+                            <p class="text-3xl font-bold text-yellow-600 mt-1">${riskRanking.filter(r => r.level === 'medium').length}</p>
                         </div>
                         <div class="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
                             <i class="fas fa-exclamation-circle text-yellow-600 text-xl"></i>
@@ -1226,7 +1232,7 @@ function renderRisk() {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-gray-500 text-sm">低风险</p>
-                            <p class="text-3xl font-bold text-green-600 mt-1">${db.riskRanking.filter(r => r.level === 'low').length}</p>
+                            <p class="text-3xl font-bold text-green-600 mt-1">${riskRanking.filter(r => r.level === 'low').length}</p>
                         </div>
                         <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
                             <i class="fas fa-check-circle text-green-600 text-xl"></i>
@@ -1235,26 +1241,23 @@ function renderRisk() {
                 </div>
             </div>
 
-            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                <div class="p-5 border-b">
-                    <h3 class="font-semibold text-gray-800">风险排名</h3>
-                </div>
-                <table class="w-full">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">排名</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">空间名称</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">类型</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">风险等级</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">风险评分</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">隐患数量</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">最新隐患</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">趋势</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">操作</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
-                        ${db.riskRanking.map(r => `
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div class="p-5 border-b">
+                        <h3 class="font-semibold text-gray-800">风险排名</h3>
+                    </div>
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">排名</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">空间名称</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">风险等级</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">风险评分</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">待处理隐患</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            ${riskRanking.slice(0, 6).map(r => `
                             <tr class="table-row-hover">
                                 <td class="px-6 py-4">
                                     <div class="w-8 h-8 rounded-full ${r.rank === 1 ? 'bg-red-500' : r.rank === 2 ? 'bg-orange-500' : r.rank === 3 ? 'bg-yellow-500' : 'bg-gray-300'} text-white flex items-center justify-center font-bold text-sm">
@@ -1262,7 +1265,6 @@ function renderRisk() {
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 font-medium text-gray-900">${r.space}</td>
-                                <td class="px-6 py-4 text-gray-600">${r.type}</td>
                                 <td class="px-6 py-4">
                                     <span class="badge ${r.level === 'critical' ? 'badge-danger' : r.level === 'high' ? 'badge-warning' : r.level === 'medium' ? 'badge-info' : 'badge-success'}">
                                         ${r.level === 'critical' ? '极高' : r.level === 'high' ? '高' : r.level === 'medium' ? '中' : '低'}
@@ -1279,32 +1281,15 @@ function renderRisk() {
                                 <td class="px-6 py-4">
                                     <span class="${r.hazards > 3 ? 'text-red-600 font-medium' : 'text-gray-600'}">${r.hazards} 个</span>
                                 </td>
-                                <td class="px-6 py-4 text-gray-600">${r.lastHazardDate}</td>
-                                <td class="px-6 py-4">
-                                    <span class="flex items-center ${r.trend === 'up' ? 'text-red-600' : r.trend === 'down' ? 'text-green-600' : 'text-gray-500'}">
-                                        <i class="fas fa-arrow-${r.trend === 'up' ? 'up' : r.trend === 'down' ? 'down' : 'right'} mr-1"></i>
-                                        ${r.trend === 'up' ? '上升' : r.trend === 'down' ? '下降' : '平稳'}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 text-sm">
-                                    <button class="text-blue-600 hover:text-blue-800 mr-3">详情</button>
-                                    <button class="text-green-600 hover:text-green-800">整改</button>
-                                </td>
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div class="bg-white rounded-xl p-6 shadow-sm">
-                    <h3 class="font-semibold text-gray-800 mb-4">风险评分分布</h3>
-                    <canvas id="riskDistributionChart" height="250"></canvas>
-                </div>
-                <div class="bg-white rounded-xl p-6 shadow-sm">
-                    <h3 class="font-semibold text-gray-800 mb-4">风险趋势分析</h3>
-                    <canvas id="riskTrendChart" height="250"></canvas>
-                </div>
+            <div class="bg-white rounded-xl p-6 shadow-sm">
+                <h3 class="font-semibold text-gray-800 mb-4">风险评分分布</h3>
+                <canvas id="riskDistributionChart" height="250"></canvas>
             </div>
         </div>
     `;

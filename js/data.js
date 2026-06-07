@@ -10,11 +10,60 @@ const defaultData = {
         { id: 6, name: '地下物流中心', type: '仓库', area: 4500, floors: 1, address: '开发区工业园', manager: '周八', phone: '13800138006', status: 'normal', merchantCount: 0, capacity: 100, lastInspection: '2024-01-12', riskLevel: 'low' }
     ],
     inspections: [
-        { id: 1, title: '月度安全巡查', space: '地下商场A区', type: '日常巡查', inspector: '张三', startDate: '2024-01-15', endDate: '2024-01-15', status: 'completed', items: 25, completed: 25, issues: 2 },
-        { id: 2, title: '消防专项检查', space: '地下车库B区', type: '专项检查', inspector: '李四', startDate: '2024-01-16', endDate: '2024-01-16', status: 'in_progress', items: 30, completed: 18, issues: 4 },
-        { id: 3, title: '节前安全大检查', space: '地下通道1号', type: '综合检查', inspector: '王五', startDate: '2024-01-17', endDate: '2024-01-18', status: 'pending', items: 40, completed: 0, issues: 0 },
-        { id: 4, title: '排水系统检查', space: '地下商场C区', type: '专项检查', inspector: '赵六', startDate: '2024-01-14', endDate: '2024-01-14', status: 'completed', items: 15, completed: 15, issues: 1 },
-        { id: 5, title: '监控系统排查', space: '地铁换乘通道', type: '专项检查', inspector: '孙七', startDate: '2024-01-10', endDate: '2024-01-11', status: 'completed', items: 20, completed: 20, issues: 6 }
+        { id: 1, title: '月度安全巡查', space: '地下商场A区', type: '日常巡查', inspector: '张三', startDate: '2024-01-15', endDate: '2024-01-15', status: 'completed', items: 8, completed: 8, issues: 2,
+            checkItems: [
+                { id: 1, name: 'A区1号消防门', category: '消防门', status: 'normal', checked: true, result: '正常', remark: '' },
+                { id: 2, name: 'A区2号消防门', category: '消防门', status: 'normal', checked: true, result: '正常', remark: '' },
+                { id: 3, name: '1号排水泵', category: '排水泵', status: 'normal', checked: true, result: '正常', remark: '' },
+                { id: 4, name: '主通道照明', category: '照明', status: 'normal', checked: true, result: '正常', remark: '' },
+                { id: 5, name: '主通道占用检查', category: '通道占用', status: 'abnormal', checked: true, result: '异常', remark: '发现货物堵塞通道' },
+                { id: 6, name: '东口监控', category: '监控盲区', status: 'normal', checked: true, result: '正常', remark: '' },
+                { id: 7, name: '西口监控', category: '监控盲区', status: 'normal', checked: true, result: '正常', remark: '' },
+                { id: 8, name: '应急照明测试', category: '照明', status: 'normal', checked: true, result: '正常', remark: '' }
+            ]
+        },
+        { id: 2, title: '消防专项检查', space: '地下车库B区', type: '专项检查', inspector: '李四', startDate: '2024-01-16', endDate: '2024-01-16', status: 'in_progress', items: 8, completed: 5, issues: 3,
+            checkItems: [
+                { id: 1, name: 'B区1号消防门', category: '消防门', status: 'normal', checked: true, result: '正常', remark: '' },
+                { id: 2, name: 'B区2号消防门', category: '消防门', status: 'abnormal', checked: true, result: '异常', remark: '闭门器损坏' },
+                { id: 3, name: '2号排水泵', category: '排水泵', status: 'abnormal', checked: true, result: '异常', remark: '有异常噪音' },
+                { id: 4, name: '3号排水泵', category: '排水泵', status: 'normal', checked: true, result: '正常', remark: '' },
+                { id: 5, name: 'B1层照明', category: '照明', status: 'abnormal', checked: true, result: '异常', remark: '多处应急灯故障' },
+                { id: 6, name: 'B2层照明', category: '照明', status: 'normal', checked: false, result: '', remark: '' },
+                { id: 7, name: 'B3层通道占用', category: '通道占用', status: 'normal', checked: false, result: '', remark: '' },
+                { id: 8, name: 'B区监控覆盖', category: '监控盲区', status: 'normal', checked: false, result: '', remark: '' }
+            ]
+        },
+        { id: 3, title: '节前安全大检查', space: '地下通道1号', type: '综合检查', inspector: '王五', startDate: '2024-01-17', endDate: '2024-01-18', status: 'pending', items: 8, completed: 0, issues: 0,
+            checkItems: [
+                { id: 1, name: '通道1号消防门', category: '消防门', status: 'normal', checked: false, result: '', remark: '' },
+                { id: 2, name: '通道排水泵', category: '排水泵', status: 'normal', checked: false, result: '', remark: '' },
+                { id: 3, name: '通道主照明', category: '照明', status: 'normal', checked: false, result: '', remark: '' },
+                { id: 4, name: '通道占用检查', category: '通道占用', status: 'normal', checked: false, result: '', remark: '' },
+                { id: 5, name: '东口监控', category: '监控盲区', status: 'normal', checked: false, result: '', remark: '' },
+                { id: 6, name: '西口监控', category: '监控盲区', status: 'normal', checked: false, result: '', remark: '' },
+                { id: 7, name: '中段转角监控', category: '监控盲区', status: 'normal', checked: false, result: '', remark: '' },
+                { id: 8, name: '应急照明测试', category: '照明', status: 'normal', checked: false, result: '', remark: '' }
+            ]
+        },
+        { id: 4, title: '排水系统检查', space: '地下商场C区', type: '专项检查', inspector: '赵六', startDate: '2024-01-14', endDate: '2024-01-14', status: 'completed', items: 4, completed: 4, issues: 1,
+            checkItems: [
+                { id: 1, name: '4号排水泵', category: '排水泵', status: 'normal', checked: true, result: '正常', remark: '' },
+                { id: 2, name: '5号排水泵', category: '排水泵', status: 'normal', checked: true, result: '正常', remark: '' },
+                { id: 3, name: '南区集水井', category: '排水泵', status: 'normal', checked: true, result: '正常', remark: '' },
+                { id: 4, name: '北区集水井', category: '排水泵', status: 'abnormal', checked: true, result: '异常', remark: '水位偏高' }
+            ]
+        },
+        { id: 5, title: '监控系统排查', space: '地铁换乘通道', type: '专项检查', inspector: '孙七', startDate: '2024-01-10', endDate: '2024-01-11', status: 'completed', items: 6, completed: 6, issues: 4,
+            checkItems: [
+                { id: 1, name: '换乘口1号摄像头', category: '监控盲区', status: 'abnormal', checked: true, result: '异常', remark: '离线' },
+                { id: 2, name: '换乘口2号摄像头', category: '监控盲区', status: 'normal', checked: true, result: '正常', remark: '' },
+                { id: 3, name: '通道中段摄像头', category: '监控盲区', status: 'abnormal', checked: true, result: '异常', remark: '画面模糊' },
+                { id: 4, name: '东口摄像头', category: '监控盲区', status: 'normal', checked: true, result: '正常', remark: '' },
+                { id: 5, name: '西口摄像头', category: '监控盲区', status: 'abnormal', checked: true, result: '异常', remark: '离线' },
+                { id: 6, name: '转角区域监控', category: '监控盲区', status: 'abnormal', checked: true, result: '异常', remark: '存在盲区' }
+            ]
+        }
     ],
     hazards: [
         { id: 1, title: '消防通道堵塞', space: '地下商场A区', location: 'A区3号出口', level: 'critical', type: '通道占用', discoverer: '张三', discoverDate: '2024-01-15', status: 'pending', handler: '物业王经理', deadline: '2024-01-17', description: '消防通道被商户堆放的货物堵塞，影响紧急疏散', attachments: [] },
@@ -232,16 +281,123 @@ function getInspections(filters = {}) {
 }
 
 function addInspection(inspection) {
+    const checkItems = inspection.checkItems || generateDefaultCheckItems(inspection.space, inspection.type);
     const newInspection = {
         id: generateId(db.inspections),
         status: 'pending',
         completed: 0,
         issues: 0,
+        items: checkItems.length,
+        checkItems: checkItems,
         ...inspection
     };
     db.inspections.push(newInspection);
     saveData();
     return newInspection;
+}
+
+function calculateRiskRanking() {
+    const ranking = db.spaces.map(space => {
+        const spaceHazards = db.hazards.filter(h => h.space === space.name);
+        const unresolvedHazards = spaceHazards.filter(h => h.status !== 'resolved');
+        const criticalHazards = unresolvedHazards.filter(h => h.level === 'critical').length;
+        const highHazards = unresolvedHazards.filter(h => h.level === 'high').length;
+        const mediumHazards = unresolvedHazards.filter(h => h.level === 'medium').length;
+        
+        let riskScore = criticalHazards * 25 + highHazards * 15 + mediumHazards * 8;
+        riskScore = Math.min(100, riskScore);
+        
+        let level = 'low';
+        if (riskScore >= 60) level = 'critical';
+        else if (riskScore >= 40) level = 'high';
+        else if (riskScore >= 20) level = 'medium';
+        
+        const lastHazard = spaceHazards.sort((a, b) => new Date(b.discoverDate) - new Date(a.discoverDate))[0];
+        
+        return {
+            space: space.name,
+            type: space.type,
+            riskScore: riskScore,
+            level: level,
+            hazards: unresolvedHazards.length,
+            lastHazardDate: lastHazard?.discoverDate || '-',
+            trend: 'stable'
+        };
+    });
+    
+    ranking.sort((a, b) => b.riskScore - a.riskScore);
+    ranking.forEach((item, index) => {
+        item.rank = index + 1;
+    });
+    
+    db.riskRanking = ranking;
+    saveData();
+    return ranking;
+}
+
+function getRiskRanking() {
+    return calculateRiskRanking();
+}
+
+function getInspectionById(id) {
+    return db.inspections.find(i => i.id === id);
+}
+
+function updateInspectionCheckItem(inspectionId, itemId, updates) {
+    const inspection = db.inspections.find(i => i.id === inspectionId);
+    if (!inspection || !inspection.checkItems) return null;
+    
+    const itemIndex = inspection.checkItems.findIndex(item => item.id === itemId);
+    if (itemIndex !== -1) {
+        inspection.checkItems[itemIndex] = { ...inspection.checkItems[itemIndex], ...updates };
+        
+        inspection.completed = inspection.checkItems.filter(item => item.checked).length;
+        inspection.issues = inspection.checkItems.filter(item => item.result === '异常').length;
+        inspection.items = inspection.checkItems.length;
+        
+        if (inspection.status === 'pending' && inspection.completed > 0) {
+            inspection.status = 'in_progress';
+        }
+        if (inspection.completed === inspection.items) {
+            inspection.status = 'completed';
+        }
+        
+        saveData();
+        return inspection;
+    }
+    return null;
+}
+
+function generateDefaultCheckItems(space, type) {
+    const defaultItems = [];
+    const categories = {
+        '消防门': ['主消防门', '次消防门', '应急出口门'],
+        '排水泵': ['1号排水泵', '2号排水泵', '集水井检查'],
+        '照明': ['主照明系统', '应急照明', '疏散指示'],
+        '通道占用': ['主通道检查', '次通道检查', '出口通道'],
+        '监控盲区': ['主要出入口监控', '通道中段监控', '转角区域监控']
+    };
+    
+    const selectedCategories = type === '专项检查' ? 
+        ['消防门', '排水泵'] : 
+        Object.keys(categories);
+    
+    let itemId = 1;
+    selectedCategories.forEach(category => {
+        categories[category].forEach(name => {
+            defaultItems.push({
+                id: itemId++,
+                name: `${space} - ${name}`,
+                category: category,
+                status: 'normal',
+                checked: false,
+                result: '',
+                remark: ''
+            });
+        });
+    });
+    
+    return defaultItems;
 }
 
 function getHazards(filters = {}) {
