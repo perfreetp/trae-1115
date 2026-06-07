@@ -358,7 +358,7 @@ function getSpaceForm(id = null) {
             </div>
             <div class="flex justify-end space-x-3 pt-4 border-t">
                 <button type="button" onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">取消</button>
-                <button type="button" onclick="${id ? `updateSpace('${id}')` : 'saveSpace()'}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">保存</button>
+                <button type="button" onclick="${id ? `saveSpaceEdit(${id})` : 'saveSpace()'}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">保存</button>
             </div>
         </form>
     `;
@@ -386,7 +386,7 @@ function saveSpace() {
     refreshCurrentPage();
 }
 
-function updateSpace(id) {
+function saveSpaceEdit(id) {
     const form = document.getElementById('editSpaceForm');
     const formData = new FormData(form);
     const updates = {
@@ -862,21 +862,48 @@ function getAssignForm(id) {
 function assignHazard(id) {
     const form = document.getElementById('assignForm');
     const formData = new FormData(form);
+    const handler = formData.get('handler');
+    const deadline = formData.get('deadline');
+    const remark = formData.get('remark') || '隐患已派单处理';
+    
+    const hazard = db.hazards.find(h => h.id === id);
+    if (!hazard) return;
     
     updateHazard(id, {
-        handler: formData.get('handler'),
-        deadline: formData.get('deadline'),
+        handler: handler,
+        deadline: deadline,
         status: 'processing'
     });
     
-    const rect = db.rectification.find(r => r.hazardId === id);
+    let rect = db.rectification.find(r => r.hazardId === id);
     if (rect) {
         updateRectification(rect.id, {
-            handler: formData.get('handler'),
-            deadline: formData.get('deadline'),
+            handler: handler,
+            deadline: deadline,
             status: 'processing'
         });
-        addRectificationLog(rect.id, '已派单', formData.get('remark') || '隐患已派单处理', formData.get('handler'));
+        addRectificationLog(rect.id, '派单', remark, handler);
+    } else {
+        const newRect = {
+            id: generateId(db.rectification),
+            hazardId: id,
+            hazard: hazard.title,
+            space: hazard.space,
+            level: hazard.level,
+            assignDate: new Date().toISOString().split('T')[0],
+            handler: handler,
+            deadline: deadline,
+            progress: 0,
+            status: 'processing',
+            logs: [{
+                time: new Date().toLocaleString('zh-CN'),
+                action: '派单',
+                operator: handler,
+                remark: remark
+            }]
+        };
+        db.rectification.push(newRect);
+        saveData();
     }
     
     closeModal();
@@ -1172,8 +1199,17 @@ function submitRejectReview(id) {
         return;
     }
     
-    updateRectification(id, { status: 'processing', progress: 50 });
-    addRectificationLog(id, '复查不通过', `复查不通过，原因：${reason}`, '复查人员');
+    const rect = db.rectification.find(x => x.id === id);
+    const currentProgress = rect?.progress || 100;
+    const fallbackProgress = Math.max(50, Math.floor(currentProgress * 0.8));
+    
+    updateRectification(id, { status: 'processing', progress: fallbackProgress });
+    addRectificationLog(id, '复查不通过', `复查不通过，原因：${reason}，进度回退至 ${fallbackProgress}%`, '复查人员');
+    
+    if (rect && rect.hazardId) {
+        updateHazard(rect.hazardId, { status: 'processing' });
+    }
+    
     closeModal();
     refreshCurrentPage();
 }
@@ -1397,11 +1433,15 @@ function savePassageRecord() {
     const formData = new FormData(form);
     const type = formData.get('type');
     const width = parseFloat(formData.get('width')) || 0;
+    const responsible = formData.get('responsible') || '';
     const description = formData.get('description') || `${type}，约${width}米宽`;
     
     const record = {
         location: formData.get('location'),
         space: formData.get('space'),
+        type: type,
+        width: width,
+        responsible: responsible,
         description: description,
         discoverDate: new Date().toISOString().split('T')[0],
         discoverer: '当前用户',

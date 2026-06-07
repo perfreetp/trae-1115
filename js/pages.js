@@ -17,6 +17,7 @@ const pageTitles = {
 function renderDashboard() {
     const s = getStats();
     const hazards = getHazards();
+    const riskRanking = getRiskRanking();
     return `
         <div class="space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -99,8 +100,8 @@ function renderDashboard() {
                                         <p class="text-xs text-gray-500">${h.space} · ${h.location}</p>
                                     </div>
                                 </div>
-                                <span class="badge ${h.status === 'pending' ? 'badge-danger' : h.status === 'processing' ? 'badge-warning' : 'badge-success'}">
-                                    ${h.status === 'pending' ? '待处理' : h.status === 'processing' ? '处理中' : '已解决'}
+                                <span class="badge ${h.status === 'pending' ? 'badge-danger' : h.status === 'processing' ? 'badge-warning' : h.status === 'reviewing' ? 'badge-info' : 'badge-success'}">
+                                    ${h.status === 'pending' ? '待处理' : h.status === 'processing' ? '处理中' : h.status === 'reviewing' ? '待复查' : '已销项'}
                                 </span>
                             </div>
                         `).join('')}
@@ -112,7 +113,7 @@ function renderDashboard() {
                         <a href="#risk" class="text-blue-600 text-sm hover:underline">全部 <i class="fas fa-arrow-right ml-1"></i></a>
                     </div>
                     <div class="space-y-4">
-                        ${db.riskRanking.slice(0, 3).map(r => `
+                        ${riskRanking.slice(0, 3).map(r => `
                             <div class="flex items-center space-x-3">
                                 <div class="w-8 h-8 rounded-full ${r.rank === 1 ? 'bg-red-500' : r.rank === 2 ? 'bg-orange-500' : 'bg-yellow-500'} text-white flex items-center justify-center font-bold text-sm">
                                     ${r.rank}
@@ -427,7 +428,7 @@ function renderHazards() {
                                         </div>
                                     </div>
                                     <span class="badge ${h.status === 'pending' ? 'badge-danger' : h.status === 'processing' ? 'badge-warning' : h.status === 'reviewing' ? 'badge-info' : 'badge-success'}">
-                                        ${h.status === 'pending' ? '待处理' : h.status === 'processing' ? '处理中' : h.status === 'reviewing' ? '待复查' : '已解决'}
+                                        ${h.status === 'pending' ? '待处理' : h.status === 'processing' ? '处理中' : h.status === 'reviewing' ? '待复查' : '已销项'}
                                     </span>
                                 </div>
                                 <div class="mt-4 flex items-center space-x-3">
@@ -904,7 +905,13 @@ function renderFloorplan() {
 
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 <div class="lg:col-span-3 bg-white rounded-xl p-6 shadow-sm">
-                    <h3 class="font-semibold text-gray-800 mb-4">分区平面图</h3>
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-semibold text-gray-800">分区平面图</h3>
+                        <span class="text-sm text-gray-500">
+                            <i class="fas fa-exclamation-triangle text-red-500 mr-1"></i>
+                            当前占用标记: <span class="font-semibold text-red-600">${records.length}</span> 处
+                        </span>
+                    </div>
                     <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 overflow-auto">
                         <div id="floorPlanContainer" style="transform-origin: top left; transform: scale(${(db.floorPlanZoom || 100) / 100});">
                             <svg id="floorPlanSvg" viewBox="0 0 800 500" class="w-full h-auto min-w-[600px]">
@@ -1003,9 +1010,15 @@ function renderFloorplan() {
                                 <div class="p-3 ${rec.status === 'pending' ? 'bg-red-50 border border-red-100' : 'bg-yellow-50 border border-yellow-100'} rounded-lg">
                                     <p class="font-medium ${rec.status === 'pending' ? 'text-red-800' : 'text-yellow-800'} text-sm">${rec.location}</p>
                                     <p class="text-xs ${rec.status === 'pending' ? 'text-red-600' : 'text-yellow-600'} mt-1">${rec.description}</p>
-                                    <div class="flex justify-between items-center mt-1">
+                                    <div class="grid grid-cols-2 gap-2 mt-2 text-xs text-gray-600">
+                                        ${rec.width ? `<div><span class="text-gray-400">占用宽度:</span> ${rec.width}米</div>` : ''}
+                                        ${rec.responsible ? `<div><span class="text-gray-400">责任单位:</span> ${rec.responsible}</div>` : ''}
+                                        ${rec.type ? `<div><span class="text-gray-400">类型:</span> ${rec.type}</div>` : ''}
+                                        <div><span class="text-gray-400">发现人:</span> ${rec.discoverer}</div>
+                                    </div>
+                                    <div class="flex justify-between items-center mt-2 pt-2 border-t border-gray-200">
                                         <span class="text-xs text-gray-500">${rec.discoverDate}</span>
-                                        <span class="text-xs text-gray-500">${rec.discoverer}</span>
+                                        <span class="text-xs badge ${rec.status === 'pending' ? 'badge-danger' : 'badge-warning'}">${rec.status === 'pending' ? '待处理' : '处理中'}</span>
                                     </div>
                                 </div>
                             `).join('')}
